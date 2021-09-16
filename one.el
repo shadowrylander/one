@@ -1,17 +1,17 @@
-;;; borg.el --- assimilate Emacs packages as Git submodules  -*- lexical-binding: t -*-
+;;; one.el --- assimilate Emacs packages as Git submodules  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2016-2021  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
-;; Homepage: https://github.com/emacscollective/borg
+;; Homepage: https://github.com/emacscollective/one
 ;; Keywords: tools
 
 ;; Package-Version: 3.2.0
 ;; Package-Requires: ((emacs "26") (epkg "3.3.0") (magit "3.0.0"))
 ;;
-;;   Borg itself does no actually require Emacs 26 and has no
+;;   One itself does no actually require Emacs 26 and has no
 ;;   other dependencies but when it is installed from Melpa,
-;;   then it includes `borg-elpa' and that requires Emacs 26
+;;   then it includes `one-elpa' and that requires Emacs 26
 ;;   and Epkg.
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
@@ -35,16 +35,16 @@
 
 ;;; Commentary:
 
-;; The Borg assimilate Emacs packages as Git submodules.  Borg is
-;; an alternative, bare-bones package manager for Emacs packages.
+;; The One assimilate Emacs packages as Git submodules.  One is
+;; an alternative, bare-bones profile manager for Emacs packages.
 
 ;; Please consult the manual for more information:
-;; https://www.emacsmirror.net/manual/borg.
+;; https://www.emacsmirror.net/manual/one.
 
-;; Borg can be used by itself or alongside `package.el'.  In the
-;; latter case Borg itself should be installed from Melpa, which
+;; One can be used by itself or alongside `package.el'.  In the
+;; latter case One itself should be installed from Melpa, which
 ;; is still experimental and not yet covered in the manual.  See
-;; https://github.com/emacscollective/borg/issues/46 for now.
+;; https://github.com/emacscollective/one/issues/46 for now.
 
 ;;; Code:
 
@@ -72,56 +72,43 @@
 (defvar git-commit-mode-map)
 (defvar compilation-mode-font-lock-keywords)
 
-(define-obsolete-variable-alias 'borg-drone-directory
-  'borg-drones-directory "Borg 3.2.0")
+(define-obsolete-variable-alias 'one-drone-directory
+  'one-drones-directory "One 3.2.0")
 
-(defvar borg-drones-directory
-  (let* ((libdir (file-name-directory (directory-file-name
-                                       (file-name-directory
-                                        (file-truename
-                                         (or load-file-name
-                                             buffer-file-name))))))
-         (topdir (file-name-directory (directory-file-name libdir))))
-    (or (ignore-errors
-          (let ((default-directory topdir))
-            (expand-file-name
-             (car (process-lines "git" "config" "borg.drones-directory")))))
-        (if (ignore-errors
-              (file-equal-p libdir (bound-and-true-p package-user-dir)))
-            (expand-file-name (file-name-as-directory "borg") topdir)
-          libdir)))
+(defvar pre-user-emacs-directory)
+(defvar one-drones-directory (concat (or pre-user-emacs-directory user-emacs-directory) "profiles")
   "Directory beneath which drone submodules are placed.
-If you need to change this, then do so before loading `borg'.")
+If you need to change this, then do so before loading `one'.")
 
-(defconst borg-user-emacs-directory
-  (file-name-directory (directory-file-name borg-drones-directory))
+(defconst one-user-emacs-directory
+  (file-name-directory (directory-file-name one-drones-directory))
   "Directory beneath which additional per-user Emacs-specific files are placed.
 
 The value of this variable is usually the same as that of
 `user-emacs-directory', except when Emacs is started with
 `emacs -q -l /path/to/init.el'.")
 
-(defconst borg-top-level-directory
+(defconst one-top-level-directory
   (or (ignore-errors
-        (let ((default-directory borg-user-emacs-directory))
+        (let ((default-directory one-user-emacs-directory))
           (file-name-as-directory
            (car (process-lines "git" "rev-parse" "--show-toplevel")))))
-      borg-user-emacs-directory)
-  "The top-level of repository containing `borg-user-emacs-directory'.")
+      one-user-emacs-directory)
+  "The top-level of repository containing `one-user-emacs-directory'.")
 
-(defconst borg-gitmodules-file
-  (expand-file-name ".gitmodules" borg-top-level-directory)
+(defconst one-gitmodules-file
+  (expand-file-name ".gitmodules" one-top-level-directory)
   "The \".gitmodules\" file of the drone repository.")
 
 ;;; Variables
 
-(defvar borg-emacs-arguments '("-Q")
+(defvar one-emacs-arguments '("-Q")
   "Arguments used when calling an inferior Emacs instance.
-Set this in \"~/.emacs.d/etc/borg/config.el\" and also set
-`EMACS_ARGUMENTS' in \"~/.emacs.d/etc/borg/config.mk\" to
+Set this in \"~/.emacs.d/etc/one/config.el\" and also set
+`EMACS_ARGUMENTS' in \"~/.emacs.d/etc/one/config.mk\" to
 the same value")
 
-(defvar borg-byte-compile-recursively nil
+(defvar one-byte-compile-recursively nil
   "Whether to compile recursively.
 
 Unfortunately there are many packages that put random crap
@@ -129,62 +116,62 @@ into subdirectories.  Instead of this variable you should set
 `submodule.<drone>.recursive-byte-compile' for each DRONE that
 needs it.")
 
-(defvar borg-build-shell-command nil
+(defvar one-build-shell-command nil
   "Optional command used to run shell command build steps.
 This variable is documented in the manual (which see).")
 
-(defvar borg-rewrite-urls-alist nil
+(defvar one-rewrite-urls-alist nil
   "An alist used to optionally rewrite certain URLs.
 Each element has the form (ORIG . BASE).  Each URL that starts
 with ORIG is rewritten to start with BASE instead.  See info
-node `(borg)Using https URLs'.")
+node `(one)Using https URLs'.")
 
 ;;; Utilities
 
-(defun borg-worktree (clone)
-  "Return the top-level of the working tree of the package named CLONE."
-  (expand-file-name (file-name-as-directory clone) borg-drones-directory))
+(defun one-worktree (clone)
+  "Return the top-level of the working tree of the profile named CLONE."
+  (expand-file-name (file-name-as-directory clone) one-drones-directory))
 
-(defun borg-gitdir (clone)
-  "Return the Git directory of the package named CLONE.
+(defun one-gitdir (clone)
+  "Return the Git directory of the profile named CLONE.
 
-Always return `<borg-user-emacs-directory>/.git/modules/<CLONE>',
+Always return `<one-user-emacs-directory>/.git/modules/<CLONE>',
 even when this repository's Git directory is actually located
 inside the working tree."
-  (let* ((default-directory borg-top-level-directory)
+  (let* ((default-directory one-top-level-directory)
          (super (ignore-errors
                   (car (process-lines "git" "rev-parse" "--git-dir")))))
     (if super
         (expand-file-name (concat super "/modules/" clone "/"))
       (error "Cannot locate super-repository"))))
 
-(defvar borg--gitmodule-cache nil)
+(defvar one--gitmodule-cache nil)
 
-(defun borg-get (clone variable &optional all)
+(defun one-get (clone variable &optional all)
   "Return the value of `submodule.CLONE.VARIABLE' in `~/.emacs.d/.gitmodules'.
 If optional ALL is non-nil, then return all values as a list."
-  (let ((values (if borg--gitmodule-cache
-                    (plist-get (cdr (assoc clone borg--gitmodule-cache))
+  (let ((values (if one--gitmodule-cache
+                    (plist-get (cdr (assoc clone one--gitmodule-cache))
                                (intern variable))
                   (ignore-errors
                     ;; If the variable has no value then the exit code is
                     ;; non-zero, but that isn't an error as far as we are
                     ;; concerned.
                     (apply #'process-lines "git" "config"
-                           "--file" borg-gitmodules-file
+                           "--file" one-gitmodules-file
                            `(,@(and all (list "--get-all"))
                              ,(concat "submodule." clone "." variable)))))))
     (if all values (car values))))
 
-(defun borg-get-all (clone variable)
+(defun one-get-all (clone variable)
   "Return all values of `submodule.CLONE.VARIABLE' in `~/.emacs.d/.gitmodules'.
 Return the values as a list."
-  (borg-get clone variable t))
+  (one-get clone variable t))
 
-(defun borg-load-path (clone)
+(defun one-load-path (clone)
   "Return the `load-path' for the clone named CLONE."
-  (let ((repo (borg-worktree clone))
-        (path (borg-get-all clone "load-path")))
+  (let ((repo (one-worktree clone))
+        (path (one-get-all clone "load-path")))
     (if  path
         (mapcar (lambda (d) (expand-file-name d repo)) path)
       (let ((elisp (expand-file-name "elisp" repo))
@@ -193,14 +180,14 @@ Return the values as a list."
                     ((file-exists-p lisp) lisp)
                     (t repo)))))))
 
-(defun borg-info-path (clone &optional setup)
+(defun one-info-path (clone &optional setup)
   "Return the `Info-directory-list' for the clone named CLONE.
 
 If optional SETUP is non-nil, then return a list of directories
 containing texinfo and/or info files.  Otherwise return a list of
 directories containing a file named \"dir\"."
-  (let ((repo (borg-worktree clone))
-        (path (borg-get-all clone "info-path")))
+  (let ((repo (one-worktree clone))
+        (path (one-get-all clone "info-path")))
     (cl-mapcan (if setup
                    (lambda (d)
                      (setq d (file-name-as-directory d))
@@ -214,11 +201,11 @@ directories containing a file named \"dir\"."
                    (mapcar (lambda (d) (expand-file-name d repo)) path)
                  (list repo)))))
 
-(defvar borg--multi-value-variables
+(defvar one--multi-value-variables
   '(build-step load-path no-byte-compile info-path)
   "List of submodule variables which can have multiple values.")
 
-(defun borg-drones (&optional include-variables)
+(defun one-drones (&optional include-variables)
   "Return a list of all assimilated drones.
 
 The returned value is a list of the names of the assimilated
@@ -226,21 +213,21 @@ drones, unless optional INCLUDE-VARIABLES is non-nil, in which
 case elements of the returned list have the form (NAME . PLIST).
 
 PLIST is a list of paired elements.  Property names are symbols
-and correspond to a VARIABLE defined in the Borg repository's
+and correspond to a VARIABLE defined in the One repository's
 \".gitmodules\" file as \"submodule.NAME.VARIABLE\".
 
 Each property value is either a string or a list of strings.  If
 INCLUDE-VARIABLES is `raw' then all values are lists.  Otherwise
 a property value is only a list if the corresponding property
-name is a member of `borg--multi-value-variables'.  If a property
-name isn't a member of `borg--multi-value-variables' but it does
+name is a member of `one--multi-value-variables'.  If a property
+name isn't a member of `one--multi-value-variables' but it does
 have multiple values anyway, then it is undefined with value is
 included in the returned value."
   (if include-variables
       (let (alist)
-        (dolist (line (and (file-exists-p borg-gitmodules-file)
+        (dolist (line (and (file-exists-p one-gitmodules-file)
                            (process-lines "git" "config" "--list"
-                                          "--file" borg-gitmodules-file)))
+                                          "--file" one-gitmodules-file)))
           (when (string-match
                  "\\`submodule\\.\\([^.]+\\)\\.\\([^=]+\\)=\\(.+\\)\\'" line)
             (let* ((drone (match-string 1 line))
@@ -253,46 +240,46 @@ included in the returned value."
               (setq plist
                     (plist-put plist prop
                                (if (or (eq include-variables 'raw)
-                                       (memq prop borg--multi-value-variables))
+                                       (memq prop one--multi-value-variables))
                                    (nconc (plist-get plist prop)
                                           (list value))
                                  value)))
               (setcdr elt plist))))
         (cl-sort alist #'string< :key #'car))
-    (let* ((default-directory borg-top-level-directory)
-           (prefix (file-relative-name borg-drones-directory))
+    (let* ((default-directory one-top-level-directory)
+           (prefix (file-relative-name one-drones-directory))
            (offset (+ (length prefix) 50)))
       (cl-mapcan (lambda (line)
                    (and (string-equal (substring line 50 offset) prefix)
                         (list (substring line offset))))
                  (process-lines "git" "submodule--helper" "list")))))
 
-(defun borg-clones ()
+(defun one-clones ()
   "Return a list of cloned packages.
 
 The returned value includes the names of all packages that were
-cloned into `borg-drones-directory', including clones that have
+cloned into `one-drones-directory', including clones that have
 not been assimilated yet."
   (cl-mapcan (lambda (file)
                (and (file-directory-p file)
                     (list (file-name-nondirectory file))))
-             (directory-files borg-drones-directory t "\\`[^.]")))
+             (directory-files one-drones-directory t "\\`[^.]")))
 
-(defun borg-read-package (prompt &optional edit-url)
-  "Read a package name and URL, and return them as a list.
+(defun one-read-profile (prompt &optional edit-url)
+  "Read a profile name and URL, and return them as a list.
 
-If the `epkg' package is available, then read a package name
+If the `epkg' profile is available, then read a profile name
 in the minibuffer and use the URL stored in the Epkg database.
 
-Otherwise if `epkg' is unavailable, the package is unknown,
+Otherwise if `epkg' is unavailable, the profile is unknown,
 or when EDIT-URL is non-nil, then also read the URL in the
 minibuffer.
 
-PROMPT is used when reading the package name.
+PROMPT is used when reading the profile name.
 
 Return a list of the form (NAME URL).  Unless the URL was
 explicitly provided by the user, it may be modified according
-to variable `borg-rewrite-urls-alist' (which see)."
+to variable `one-rewrite-urls-alist' (which see)."
   (if (require 'epkg nil t)
       (let* ((name (completing-read prompt (epkgs 'name)
                                     nil nil nil 'epkg-package-history))
@@ -305,7 +292,7 @@ to variable `borg-rewrite-urls-alist' (which see)."
                             (eieio-oref pkg 'url)
                           (eieio-oref pkg 'mirror-url)))))
         (when url
-          (pcase-dolist (`(,orig . ,base) borg-rewrite-urls-alist)
+          (pcase-dolist (`(,orig . ,base) one-rewrite-urls-alist)
             (when (string-prefix-p orig url)
               (setq url (concat base (substring url (length orig)))))))
         (list name
@@ -320,12 +307,12 @@ to variable `borg-rewrite-urls-alist' (which see)."
     (list (read-string prompt)
           (read-string "Url: "))))
 
-(defun borg-read-clone (prompt)
-  "Read the name of a cloned package, prompting with PROMPT."
+(defun one-read-clone (prompt)
+  "Read the name of a cloned profile, prompting with PROMPT."
   (require 'epkg nil t)
-  (completing-read prompt (borg-clones) nil t nil 'epkg-package-history))
+  (completing-read prompt (one-clones) nil t nil 'epkg-package-history))
 
-(defmacro borg-silencio (regexp &rest body)
+(defmacro one-silencio (regexp &rest body)
   "Execute the forms in BODY while silencing messages that don't match REGEXP."
   (declare (indent 1))
   (let ((msg (make-symbol "msg")))
@@ -338,10 +325,10 @@ to variable `borg-rewrite-urls-alist' (which see)."
 
 ;;; Activation
 
-(defun borg-initialize ()
+(defun one-initialize ()
   "Initialize assimilated drones.
 
-For each drone use `borg-activate' to add the appropriate
+For each drone use `one-activate' to add the appropriate
 directories to the `load-path' and `Info-directory-alist', and
 load the autoloads file, if it exists.
 
@@ -350,10 +337,10 @@ is true in \"~/.emacs.d/.gitmodules\", then the drone named DRONE
 is skipped.
 
 If Emacs is running without an interactive terminal, then first
-load \"`user-emacs-directory'/etc/borg/init.el\", if that exists."
+load \"`user-emacs-directory'/etc/one/init.el\", if that exists."
   (when noninteractive
     (let ((init (expand-file-name
-                 (convert-standard-filename "etc/borg/init.el")
+                 (convert-standard-filename "etc/one/init.el")
                  user-emacs-directory)))
       (when (file-exists-p init)
         (load-file init))))
@@ -361,16 +348,16 @@ load \"`user-emacs-directory'/etc/borg/init.el\", if that exists."
   (let ((start (current-time))
         (skipped 0)
         (initialized 0)
-        (borg--gitmodule-cache (borg-drones 'raw)))
-    (pcase-dolist (`(,drone) borg--gitmodule-cache)
+        (one--gitmodule-cache (one-drones 'raw)))
+    (pcase-dolist (`(,drone) one--gitmodule-cache)
       (cond
-       ((equal (borg-get drone "disabled") "true")
+       ((equal (one-get drone "disabled") "true")
         (cl-incf skipped))
-       ((not (file-exists-p (borg-worktree drone)))
+       ((not (file-exists-p (one-worktree drone)))
         (cl-incf skipped))
        (t
         (cl-incf initialized)
-        (borg-activate drone))))
+        (one-activate drone))))
     (let* ((message (current-message))
            (inhibit (and message
                          (string-match-p
@@ -386,14 +373,14 @@ load \"`user-emacs-directory'/etc/borg/init.el\", if that exists."
         (let ((message-log-max nil))
           (message "%s" message))))))
 
-(defun borg-activate (clone)
+(defun one-activate (clone)
   "Activate the clone named CLONE.
 
 Add the appropriate directories to `load-path' and
 `Info-directory-list', and load the autoloads file,
 if it exists."
-  (interactive (list (borg-read-clone "Activate clone: ")))
-  (dolist (dir (borg-load-path clone))
+  (interactive (list (one-read-clone "Activate clone: ")))
+  (dolist (dir (one-load-path clone))
     (let (file)
       (cond ((and (file-exists-p
                    (setq file (expand-file-name
@@ -407,12 +394,12 @@ if it exists."
                     (add-to-list 'load-path dir) ; for `org'
                     (load file nil t))))
             (t (push dir load-path)))))
-  (dolist (dir (borg-info-path clone))
+  (dolist (dir (one-info-path clone))
     (push  dir Info-directory-list)))
 
 ;;; Construction
 
-(defun borg-batch-rebuild (&optional quick)
+(defun one-batch-rebuild (&optional quick)
   "Rebuild all assimilated drones.
 
 Drones are rebuilt in alphabetic order, except that Org is built
@@ -424,18 +411,18 @@ When optional QUICK is non-nil, then do not build drones for
 which `submodule.DRONE.build-step' is set, assuming those are the
 drones that take longer to be built."
   (unless noninteractive
-    (error "borg-batch-rebuild is to be used only with --batch"))
-  (let ((drones (borg-drones)))
+    (error "one-batch-rebuild is to be used only with --batch"))
+  (let ((drones (one-drones)))
     (when (member "org" drones)
       ;; `org-loaddefs.el' has to exist when compiling a library
       ;; which depends on `org', else we get warnings about that
       ;; not being so, and other more confusing warnings too.
       (setq drones (cons "org" (delete "org" drones))))
     (dolist (drone drones)
-      (unless (or (equal (borg-get drone "disabled") "true")
-                  (not (file-exists-p (borg-worktree drone)))
-                  (and quick (borg-get-all drone "build-step")))
-        (dolist (d (borg-load-path drone))
+      (unless (or (equal (one-get drone "disabled") "true")
+                  (not (file-exists-p (one-worktree drone)))
+                  (and quick (one-get-all drone "build-step")))
+        (dolist (d (one-load-path drone))
           (dolist (f (directory-files
                       d t "\\(\\.elc\\|-autoloads\\.el\\|-loaddefs\\.el\\)\\'"
                       t))
@@ -443,23 +430,23 @@ drones that take longer to be built."
     (dolist (drone drones)
       (message "\n--- [%s] ---\n" drone)
       (cond
-       ((equal (borg-get drone "disabled") "true")
+       ((equal (one-get drone "disabled") "true")
         (message "Skipped (Disabled)"))
-       ((not (file-exists-p (borg-worktree drone)))
+       ((not (file-exists-p (one-worktree drone)))
         (message "Skipped (Missing)"))
-       ((and quick (borg-get-all drone "build-step"))
+       ((and quick (one-get-all drone "build-step"))
         (message "Skipped (Expensive to build)"))
-       (t (borg-build drone)))))
-  (borg-batch-rebuild-init))
+       (t (one-build drone)))))
+  (one-batch-rebuild-init))
 
-(defun borg-batch-rebuild-init ()
+(defun one-batch-rebuild-init ()
   "Rebuild `init.el' and `USER-REAL-LOGIN-NAME.el'.
 
 This function is to be used only with `--batch'."
   (unless noninteractive
-    (error "borg-batch-recompile-init is to be used only with --batch"))
-  (borg-silencio "\\`%s\\.\\.\\.\\(done\\)?" ; silence use-package
-    (let ((default-directory borg-user-emacs-directory))
+    (error "one-batch-recompile-init is to be used only with --batch"))
+  (one-silencio "\\`%s\\.\\.\\.\\(done\\)?" ; silence use-package
+    (let ((default-directory one-user-emacs-directory))
       (dolist (file (or command-line-args-left
                         (list "init.el"
                               (concat (user-real-login-name) ".el"))))
@@ -468,29 +455,29 @@ This function is to be used only with `--batch'."
           (load-file file)
           (byte-recompile-file (expand-file-name file) t 0))))))
 
-(defun borg-build (clone &optional activate)
+(defun one-build (clone &optional activate)
   "Build the clone named CLONE.
 Interactively, or when optional ACTIVATE is non-nil,
-then also activate the clone using `borg-activate'."
-  (interactive (list (borg-read-clone "Build drone: ") t))
+then also activate the clone using `one-activate'."
+  (interactive (list (one-read-clone "Build drone: ") t))
   (if noninteractive
-      (borg--build-noninteractive clone)
-    (borg--build-interactive clone))
+      (one--build-noninteractive clone)
+    (one--build-interactive clone))
   (when activate
-    (borg-activate clone)))
+    (one-activate clone)))
 
-(defun borg--build-noninteractive (clone)
-  (let ((default-directory (borg-worktree clone))
-        (build-cmd (if (functionp borg-build-shell-command)
-                       (funcall borg-build-shell-command clone)
-                     borg-build-shell-command))
-        (build (borg-get-all clone "build-step")))
+(defun one--build-noninteractive (clone)
+  (let ((default-directory (one-worktree clone))
+        (build-cmd (if (functionp one-build-shell-command)
+                       (funcall one-build-shell-command clone)
+                     one-build-shell-command))
+        (build (one-get-all clone "build-step")))
     (if  build
         (dolist (cmd build)
           (message "  Running `%s'..." cmd)
-          (cond ((member cmd '("borg-update-autoloads"
-                               "borg-byte-compile"
-                               "borg-makeinfo"))
+          (cond ((member cmd '("one-update-autoloads"
+                               "one-byte-compile"
+                               "one-makeinfo"))
                  (funcall (intern cmd) clone))
                 ((string-match-p "\\`(" cmd)
                  (eval (read cmd)))
@@ -505,12 +492,12 @@ then also activate the clone using `borg-activate'."
                 (t
                  (shell-command cmd)))
           (message "  Running `%s'...done" cmd))
-      (let ((path (mapcar #'file-name-as-directory (borg-load-path clone))))
-        (borg-update-autoloads clone path)
-        (borg-byte-compile clone path)
-        (borg-makeinfo clone)))))
+      (let ((path (mapcar #'file-name-as-directory (one-load-path clone))))
+        (one-update-autoloads clone path)
+        (one-byte-compile clone path)
+        (one-makeinfo clone)))))
 
-(defun borg--build-interactive (clone)
+(defun one--build-interactive (clone)
   (save-some-buffers
    nil (let ((top default-directory))
          (lambda ()
@@ -518,15 +505,15 @@ then also activate the clone using `borg-activate'."
              (and file
                   (string-match-p emacs-lisp-file-regexp file)
                   (file-in-directory-p file top))))))
-  (let ((buffer (get-buffer-create "*Borg Build*"))
+  (let ((buffer (get-buffer-create "*One Build*"))
         (config (expand-file-name
-                 (convert-standard-filename "etc/borg/config.el")
+                 (convert-standard-filename "etc/one/config.el")
                  user-emacs-directory))
         (process-connection-type nil))
     (switch-to-buffer buffer)
     (with-current-buffer buffer
-      (setq default-directory borg-user-emacs-directory)
-      (borg-build-mode)
+      (setq default-directory one-user-emacs-directory)
+      (one-build-mode)
       (goto-char (point-max))
       (let ((inhibit-read-only t))
         (when (file-exists-p config)
@@ -539,29 +526,29 @@ then also activate the clone using `borg-activate'."
                         clone))))
     (set-process-filter
      (apply #'start-process
-            (format "emacs ... --eval (borg-build %S)" clone)
+            (format "emacs ... --eval (one-build %S)" clone)
             buffer
             (expand-file-name invocation-name invocation-directory)
-            `("--batch" ,@borg-emacs-arguments
-              "-L" ,(file-name-directory (locate-library "borg"))
-              "--eval" ,(if (featurep 'borg-elpa)
+            `("--batch" ,@one-emacs-arguments
+              "-L" ,(file-name-directory (locate-library "one"))
+              "--eval" ,(if (featurep 'one-elpa)
                             (format "(progn
   (setq user-emacs-directory %S)
   (require 'package)
   (package-initialize 'no-activate)
-  (package-activate 'borg)
-  (require 'borg-elpa)
-  (borg-elpa-initialize)
-  (setq borg-build-shell-command (quote %S))
-  (borg-build %S))" user-emacs-directory borg-build-shell-command clone)
+  (package-activate 'one)
+  (require 'one-elpa)
+  (one-elpa-initialize)
+  (setq one-build-shell-command (quote %S))
+  (one-build %S))" user-emacs-directory one-build-shell-command clone)
                           (format "(progn
-  (require 'borg)
-  (borg-initialize)
-  (setq borg-build-shell-command (quote %S))
-  (borg-build %S))" borg-build-shell-command clone))))
-     'borg-build--process-filter)))
+  (require 'one)
+  (one-initialize)
+  (setq one-build-shell-command (quote %S))
+  (one-build %S))" one-build-shell-command clone))))
+     'one-build--process-filter)))
 
-(defun borg-build--process-filter (process string)
+(defun one-build--process-filter (process string)
   (when (buffer-live-p (process-buffer process))
     (with-current-buffer (process-buffer process)
       (let ((moving (= (point) (process-mark process))))
@@ -572,28 +559,28 @@ then also activate the clone using `borg-activate'."
           (set-marker (process-mark process) (point)))
         (if moving (goto-char (process-mark process)))))))
 
-(defvar borg-build-mode-map
+(defvar one-build-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-q" 'bury-buffer)
     map)
-  "Keymap for `borg-build-mode'.")
+  "Keymap for `one-build-mode'.")
 
-(defvar borg-build-mode-lighter "Borg-Build")
+(defvar one-build-mode-lighter "One-Build")
 
-(define-derived-mode borg-build-mode compilation-mode
-  'borg-build-mode-lighter
-  "Mode for the \"*Borg Build*\" buffer."
+(define-derived-mode one-build-mode compilation-mode
+  'one-build-mode-lighter
+  "Mode for the \"*One Build*\" buffer."
   (setq mode-line-process
         '((:propertize ":%s" face compilation-mode-line-run)
           compilation-mode-line-errors))
-  (setq font-lock-defaults '(borg-build-mode-font-lock-keywords t)))
+  (setq font-lock-defaults '(one-build-mode-font-lock-keywords t)))
 
-(defun borg-build-mode-font-lock-keywords ()
+(defun one-build-mode-font-lock-keywords ()
   (append '((compilation--ensure-parse))
           (remove '(" --?o\\(?:utfile\\|utput\\)?[= ]\\(\\S +\\)" . 1)
                   compilation-mode-font-lock-keywords)))
 
-(defconst borg-autoload-format "\
+(defconst one-autoload-format "\
 ;;;\
  %s --- automatically extracted autoloads
 ;;
@@ -610,12 +597,12 @@ then also activate the clone using `borg-activate'."
 ;;;\
  %s ends here\n")
 
-(defun borg-update-autoloads (clone &optional path)
+(defun one-update-autoloads (clone &optional path)
   "Update autoload files for the clone named CLONE in the directories in PATH."
-  (setq path (borg--expand-load-path clone path))
+  (setq path (one--expand-load-path clone path))
   (let ((autoload-excludes
          (nconc (mapcar #'expand-file-name
-                        (borg-get-all clone "no-byte-compile"))
+                        (one-get-all clone "no-byte-compile"))
                 (cl-mapcan
                  (lambda (dir)
                    (list (expand-file-name (concat clone "-pkg.el") dir)
@@ -632,7 +619,7 @@ then also activate the clone using `borg-activate'."
            (version-control 'never)
            (noninteractive t)
            (filename (file-name-nondirectory generated-autoload-file)))
-      (write-region (format borg-autoload-format filename filename)
+      (write-region (format one-autoload-format filename filename)
                     nil generated-autoload-file nil 'silent)
       (cl-letf (((symbol-function 'progress-reporter-do-update) (lambda (&rest _)))
                 ((symbol-function 'progress-reporter-done) (lambda (_))))
@@ -643,13 +630,13 @@ then also activate the clone using `borg-activate'."
     (when-let ((buf (find-buffer-visiting generated-autoload-file)))
       (kill-buffer buf))))
 
-(defun borg-byte-compile (clone &optional path)
+(defun one-byte-compile (clone &optional path)
   "Compile libraries for the clone named CLONE in the directories in PATH."
-  (let ((dirs (borg--expand-load-path clone path))
-        (exclude (borg-get-all clone "no-byte-compile"))
-        (topdir (borg-worktree clone))
-        (default-directory     borg-user-emacs-directory)
-        (byte-compile-root-dir borg-user-emacs-directory)
+  (let ((dirs (one--expand-load-path clone path))
+        (exclude (one-get-all clone "no-byte-compile"))
+        (topdir (one-worktree clone))
+        (default-directory     one-user-emacs-directory)
+        (byte-compile-root-dir one-user-emacs-directory)
         (skip-count 0)
         (fail-count 0)
         (file-count 0)
@@ -661,10 +648,10 @@ then also activate the clone using `borg-activate'."
          (let ((file-relative (file-relative-name file topdir))
                (name (file-name-nondirectory file)))
            (if (file-directory-p file)
-               (when (and (if-let ((v (borg-get
+               (when (and (if-let ((v (one-get
                                        clone "recursive-byte-compile")))
                               (member v '("yes" "on" "true" "1"))
-                            borg-byte-compile-recursively)
+                            one-byte-compile-recursively)
                           (not (file-symlink-p file))
                           (not (string-prefix-p "." name))
                           (not (member name '("RCS" "CVS"))))
@@ -702,10 +689,10 @@ then also activate the clone using `borg-activate'."
              (if (> skip-count 0) (format ", %d skipped" skip-count) "")
              (if (> dir-count  1) (format " in %d directories" dir-count) ""))))
 
-(defun borg-makeinfo (clone)
+(defun one-makeinfo (clone)
   "Generate Info manuals and the Info index for the clone named CLONE."
-  (dolist (default-directory (borg-info-path clone t))
-    (let ((exclude (borg-get-all clone "no-makeinfo")))
+  (dolist (default-directory (one-info-path clone t))
+    (let ((exclude (one-get-all clone "no-makeinfo")))
       (dolist (texi (directory-files default-directory nil "\\.texi\\(nfo\\)?\\'"))
         (let ((info (concat (file-name-sans-extension texi) ".info")))
           (when (and (not (member texi exclude))
@@ -715,104 +702,110 @@ then also activate the clone using `borg-activate'."
                             1)))
             (let ((cmd (format "makeinfo --no-split %s -o %s" texi info)))
               (message "  Running `%s'..." cmd)
-              (borg-silencio "\\`(Shell command succeeded with %s)\\'"
+              (one-silencio "\\`(Shell command succeeded with %s)\\'"
                 (shell-command cmd))
               (message "  Running `%s'...done" cmd))))))
     (dolist (info (directory-files default-directory nil "\\.info\\'"))
       (let ((cmd (format "install-info %s --dir=dir" info)))
         (message "  Running `%s'..." cmd)
-        (borg-silencio "\\`(Shell command succeeded with %s)\\'"
+        (one-silencio "\\`(Shell command succeeded with %s)\\'"
           (shell-command cmd))
         (message "  Running `%s'...done" cmd)))))
 
 ;;; Assimilation
 
-(defun borg-assimilate (package url &optional partially)
-  "Assimilate the package named PACKAGE from URL.
+(defun one-assimilate (profile url &optional partially)
+  "Assimilate the profile named PROFILE from URL.
 
-If `epkg' is available, then only read the name of the package
+If `epkg' is available, then only read the name of the profile
 in the minibuffer and use the url stored in the Epkg database.
-If `epkg' is unavailable, the package is not in the database, or
+If `epkg' is unavailable, the profile is not in the database, or
 with a prefix argument, then also read the url in the minibuffer.
 
 With a negative prefix argument only add the submodule but don't
 build and activate the drone."
   (interactive
-   (nconc (borg-read-package "Assimilate package: " current-prefix-arg)
+   (nconc (one-read-profile "Assimilate profile: " current-prefix-arg)
           (list (< (prefix-numeric-value current-prefix-arg) 0))))
-  (borg--maybe-confirm-unsafe-action "assimilate" package url)
-  (message "Assimilating %s..." package)
-  (let ((default-directory borg-top-level-directory))
-    (borg--maybe-reuse-gitdir package)
-    (borg--call-git package "submodule" "add" "--name" package url
-                    (file-relative-name (borg-worktree package)))
-    (borg--sort-submodule-sections ".gitmodules")
-    (borg--call-git package "add" ".gitmodules")
-    (borg--maybe-absorb-gitdir package))
+  (one--maybe-confirm-unsafe-action "assimilate" profile url)
+  (message "Assimilating %s..." profile)
+  (let ((default-directory one-top-level-directory))
+    (one--maybe-reuse-gitdir profile)
+    (one--call-git profile
+                  "submodule"
+                  "add"
+                  "--name"
+                  (concat "profile" (if (member system-type '(windows-nt ms-dos)) "\\" "/"))
+                  profile
+                  url
+                  (file-relative-name (one-worktree profile)))
+    (one--sort-submodule-sections ".gitmodules")
+    (one--call-git profile "add" ".gitmodules")
+    (one--maybe-absorb-gitdir profile))
   (unless partially
-    (borg-build package)
-    (borg-activate package))
-  (borg--refresh-magit)
-  (message "Assimilating %s...done" package))
+    (one-build profile)
+    (one-activate profile))
+  (one--refresh-magit)
+  (message "Assimilating %s...done" profile))
 
-(defun borg-clone (package url)
-  "Clone the package named PACKAGE from URL, without assimilating it.
+(defun one-clone (profile url)
+  "Clone the profile named PROFILE from URL, without assimilating it.
 
-If `epkg' is available, then only read the name of the package
+If `epkg' is available, then only read the name of the profile
 in the minibuffer and use the url stored in the Epkg database.
-If `epkg' is unavailable, the package is not in the database, or
+If `epkg' is unavailable, the profile is not in the database, or
 with a prefix argument, then also read the url in the minibuffer."
-  (interactive (borg-read-package "Clone package: " current-prefix-arg))
-  (borg--maybe-confirm-unsafe-action "clone" package url)
-  (message "Cloning %s..." package)
-  (let ((gitdir (borg-gitdir package))
-        (topdir (borg-worktree package)))
+  (interactive (one-read-profile "Clone profile: " current-prefix-arg))
+  (one--maybe-confirm-unsafe-action "clone" profile url)
+  (message "Cloning %s..." profile)
+  (let ((gitdir (one-gitdir profile))
+        (topdir (one-worktree profile)))
     (when (file-exists-p topdir)
       (user-error "%s already exists" topdir))
-    (let ((default-directory borg-top-level-directory))
-      (borg--maybe-reuse-gitdir package)
+    (let ((default-directory one-top-level-directory))
+      (one--maybe-reuse-gitdir profile)
       (unless (file-exists-p topdir)
-        (borg--call-git package "clone"
+        (one--call-git profile "clone"
                         (concat "--separate-git-dir="
                                 ;; Git fails if this ends with slash.
                                 (directory-file-name gitdir))
                         url (file-relative-name topdir)))
-      (borg--link-gitdir package))
-    (borg--refresh-magit)
-    (message "Cloning %s...done" package)))
+      (one--link-gitdir profile))
+    (one--refresh-magit)
+    (message "Cloning %s...done" profile)))
 
-(defun borg-remove (clone)
-  "Remove the cloned or assimilated package named CLONE.
+(defun one-remove (clone)
+  "Remove the cloned or assimilated profile named CLONE.
 
-Remove the working tree from `borg-drones-directory', regardless
-of whether that repository belongs to an assimilated package or a
-package that has only been cloned for review using `borg-clone'.
+Remove the working tree from `one-drones-directory', regardless
+of whether that repository belongs to an assimilated profile or a
+profile that has only been cloned for review using `one-clone'.
 The Git directory is not removed."
-  (interactive (list (borg-read-clone "Uninstall clone: ")))
+  (interactive (list (one-read-clone "Uninstall clone: ")))
   (message "Removing %s..." clone)
-  (let ((topdir (borg-worktree clone)))
+  (let ((topdir (one-worktree clone)))
     (let ((default-directory topdir))
-      (when (or (not (borg--git-success "diff" "--quiet" "--cached"))
-                (not (borg--git-success "diff" "--quiet")))
+      (when (or (not (one--git-success "diff" "--quiet" "--cached"))
+                (not (one--git-success "diff" "--quiet")))
         (user-error "%s contains uncommitted changes" topdir))
-      (borg--maybe-absorb-gitdir clone))
-    (if (member clone (borg-drones))
-        (let ((default-directory borg-top-level-directory))
-          (borg--call-git nil "rm" "--force" (file-relative-name topdir)))
+      (one--maybe-absorb-gitdir clone))
+    (if (member clone (one-drones))
+        (let ((default-directory one-top-level-directory))
+          (one--call-git nil "rm" "--force" (file-relative-name topdir)))
       (delete-directory topdir t t)))
-  (borg--refresh-magit)
+  (one--refresh-magit)
   (message "Removing %s...done" clone))
 
 ;;; Convenience
 
 (with-eval-after-load 'git-commit
-  (define-key git-commit-mode-map "\C-c\C-b" 'borg-insert-update-message))
+  (define-key git-commit-mode-map "\C-c\C-b" 'one-insert-update-message))
 
-(defun borg-insert-update-message ()
+(defun one-insert-update-message ()
   "Insert information about drones that are changed in the index.
 Formatting is according to the commit message conventions."
   (interactive)
-  (when-let ((alist (borg--drone-states)))
+  (when-let ((alist (one--drone-states)))
     (let ((width (apply #'max (mapcar (lambda (e) (length (car e))) alist)))
           (align (cl-member-if (pcase-lambda (`(,_ ,_ ,version))
                                  (and version
@@ -846,8 +839,8 @@ Formatting is according to the commit message conventions."
             "")
           version))))))
 
-(defun borg--drone-states ()
-  (let ((default-directory borg-user-emacs-directory))
+(defun one--drone-states ()
+  (let ((default-directory one-user-emacs-directory))
     (mapcar
      (lambda (line)
        (pcase-let ((`(,state ,module) (split-string line "\t")))
@@ -860,30 +853,30 @@ Formatting is according to the commit message conventions."
                                 "git" "describe" "--tags" "--always"))
                         "REMOVED"))))))
      (process-lines "git" "diff-index" "--name-status" "--cached" "HEAD"
-                    "--" (file-relative-name borg-drones-directory)))))
+                    "--" (file-relative-name one-drones-directory)))))
 
 ;;; Internal Utilities
 
-(defun borg--maybe-absorb-gitdir (pkg)
+(defun one--maybe-absorb-gitdir (pkg)
   (let* ((ver (nth 2 (split-string (car (process-lines "git" "version")) " ")))
          (ver (and (string-match "\\`[0-9]+\\(\\.[0-9]+\\)*" ver)
                    (match-string 0 ver))))
     (if (version< ver "2.12.0")
-        (let ((gitdir (borg-gitdir pkg))
-              (topdir (borg-worktree pkg)))
+        (let ((gitdir (one-gitdir pkg))
+              (topdir (one-worktree pkg)))
           (unless (equal (let ((default-directory topdir))
                            (car (process-lines "git" "rev-parse" "--git-dir")))
                          (directory-file-name gitdir))
             (rename-file (expand-file-name ".git" topdir) gitdir)
-            (borg--link-gitdir pkg)
+            (one--link-gitdir pkg)
             (let ((default-directory gitdir))
-              (borg--call-git pkg "config" "core.worktree"
+              (one--call-git pkg "config" "core.worktree"
                               (concat "../../../lib/" pkg)))))
-      (borg--call-git pkg "submodule" "absorbgitdirs" "--" (borg-worktree pkg)))))
+      (one--call-git pkg "submodule" "absorbgitdirs" "--" (one-worktree pkg)))))
 
-(defun borg--maybe-reuse-gitdir (pkg)
-  (let ((gitdir (borg-gitdir pkg))
-        (topdir (borg-worktree pkg)))
+(defun one--maybe-reuse-gitdir (pkg)
+  (let ((gitdir (one-gitdir pkg))
+        (topdir (one-worktree pkg)))
     (when (and (file-exists-p gitdir)
                (not (file-exists-p topdir)))
       (pcase (read-char-choice
@@ -893,26 +886,26 @@ Formatting is according to the commit message conventions."
                "     [d] to delete the old gitdir and clone again\n"
                "   [C-g] to abort ")
               '(?r ?d))
-        (?r (borg--restore-worktree pkg))
+        (?r (one--restore-worktree pkg))
         (?d (delete-directory gitdir t t))))))
 
-(defun borg--restore-worktree (pkg)
-  (let ((topdir (borg-worktree pkg)))
+(defun one--restore-worktree (pkg)
+  (let ((topdir (one-worktree pkg)))
     (make-directory topdir t)
-    (borg--link-gitdir pkg)
+    (one--link-gitdir pkg)
     (let ((default-directory topdir))
-      (borg--call-git pkg "reset" "--hard" "HEAD"))))
+      (one--call-git pkg "reset" "--hard" "HEAD"))))
 
-(defun borg--link-gitdir (pkg)
-  (let ((gitdir (borg-gitdir pkg))
-        (topdir (borg-worktree pkg)))
+(defun one--link-gitdir (pkg)
+  (let ((gitdir (one-gitdir pkg))
+        (topdir (one-worktree pkg)))
     (with-temp-file (expand-file-name ".git" topdir)
       (insert "gitdir: " (file-relative-name gitdir topdir) "\n"))))
 
-(defun borg--call-git (pkg &rest args)
+(defun one--call-git (pkg &rest args)
   (let ((process-connection-type nil)
         (buffer (generate-new-buffer
-                 (concat " *Borg Git" (and pkg (concat " " pkg)) "*"))))
+                 (concat " *One Git" (and pkg (concat " " pkg)) "*"))))
     (if (eq (apply #'call-process "git" nil buffer nil args) 0)
         (kill-buffer buffer)
       (with-current-buffer buffer
@@ -920,21 +913,21 @@ Formatting is according to the commit message conventions."
       (pop-to-buffer buffer)
       (error "Git failed"))))
 
-(defun borg--git-success (&rest args)
+(defun one--git-success (&rest args)
   (= (apply #'process-file "git" nil nil nil args) 0))
 
-(defun borg--refresh-magit ()
+(defun one--refresh-magit ()
   (when (and (derived-mode-p 'magit-mode)
              (fboundp 'magit-refresh))
     (magit-refresh)))
 
-(defun borg--expand-load-path (clone path)
-  (let ((default-directory (borg-worktree clone)))
+(defun one--expand-load-path (clone path)
+  (let ((default-directory (one-worktree clone)))
     (mapcar (lambda (p)
               (file-name-as-directory (expand-file-name p)))
-            (or path (borg-load-path clone)))))
+            (or path (one-load-path clone)))))
 
-(defun borg--sort-submodule-sections (file)
+(defun one--sort-submodule-sections (file)
   "Sort submodule sections in the current buffer.
 Non-interactively operate in FILE instead."
   (interactive (list buffer-file-name))
@@ -954,37 +947,37 @@ Non-interactively operate in FILE instead."
           (goto-char end))))
     (save-buffer)))
 
-(defun borg--maybe-confirm-unsafe-action (action package url)
+(defun one--maybe-confirm-unsafe-action (action profile url)
   (require 'epkg nil t)
   (let* ((pkg (and (fboundp 'epkg)
-                   (epkg package)))
+                   (epkg profile)))
          (ask (cond ((and pkg
-                          (fboundp 'epkg-wiki-package-p)
-                          (epkg-wiki-package-p pkg)) "\
-This package is from the Emacswiki.  Anyone could trivially \
+                          (fboundp 'epkg-wiki-profile-p)
+                          (epkg-wiki-profile-p pkg)) "\
+This profile is from the Emacswiki.  Anyone could trivially \
 inject malicious code.  Do you really want to %s it? ")
                     ((or (and pkg
-                              (fboundp 'epkg-orphaned-package-p)
-                              (epkg-orphaned-package-p pkg))
+                              (fboundp 'epkg-orphaned-profile-p)
+                              (epkg-orphaned-profile-p pkg))
                          (string-match-p "emacsorphanage" url)) "\
-This package is from the Emacsorphanage, which might import it \
+This profile is from the Emacsorphanage, which might import it \
 over an insecure connection.  Do you really want to %s it? ")
                     ((or (and pkg
-                              (fboundp 'epkg-shelved-package-p)
-                              (epkg-shelved-package-p pkg))
+                              (fboundp 'epkg-shelved-profile-p)
+                              (epkg-shelved-profile-p pkg))
                          (string-match-p "emacsattic" url)) "\
-This package is from the Emacsattic, which might have imported it \
+This profile is from the Emacsattic, which might have imported it \
 over an insecure connection.  Do you really want to %s it? ")
                     ((or (string-prefix-p "git://" url)
                          (string-prefix-p "http://" url)) "\
-This package is being fetched over an insecure connection. \
+This profile is being fetched over an insecure connection. \
 Do you really want to %s it? "))))
     (when (and ask (not (yes-or-no-p (format ask action))))
       (user-error "Abort"))))
 
 ;;; _
-(provide 'borg)
+(provide 'one)
 ;; Local Variables:
 ;; indent-tabs-mode: nil
 ;; End:
-;;; borg.el ends here
+;;; one.el ends here

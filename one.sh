@@ -5,8 +5,8 @@
 # Author: Jonas Bernoulli <jonas@bernoul.li>
 # License: GPL v3 <https://www.gnu.org/licenses/gpl-3.0.txt>
 
-hive_remote=$(git config -f .gitmodules borg.collective)
-push_remote=$(git config -f .gitmodules borg.pushDefault)
+hive_remote=$(git config -f .gitmodules one.collective)
+push_remote=$(git config -f .gitmodules one.pushDefault)
 
 toplevel=$(git rev-parse --show-toplevel)
 test -n "$toplevel" || exit 2

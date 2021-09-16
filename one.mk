@@ -5,16 +5,16 @@
 
 BORG_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
--include ../../etc/borg/config.mk
+-include ../../etc/one/config.mk
 
 ifeq "$(BORG_SECONDARY_P)" "true"
-  DRONES_DIR ?= $(shell git config "borg.drones-directory" || echo "elpa")
-  BORG_ARGUMENTS = -L $(BORG_DIR) --load borg-elpa \
-  --funcall borg-elpa-initialize
+  DRONES_DIR ?= $(shell git config "one.drones-directory" || echo "elpa")
+  BORG_ARGUMENTS = -L $(BORG_DIR) --load one-elpa \
+  --funcall one-elpa-initialize
 else
-  DRONES_DIR ?= $(shell git config "borg.drones-directory" || echo "lib")
-  BORG_ARGUMENTS = -L $(BORG_DIR) --load borg \
-  --funcall borg-initialize
+  DRONES_DIR ?= $(shell git config "one.drones-directory" || echo "lib")
+  BORG_ARGUMENTS = -L $(BORG_DIR) --load one \
+  --funcall one-initialize
 endif
 
 EMACS           ?= emacs
@@ -52,7 +52,7 @@ endif
 	$(info make clean           = remove all byte-code files)
 	$(info make clean-init      = remove init files)
 ifneq "$(BORG_SECONDARY_P)" "true"
-	$(info make bootstrap-borg  = bootstrap borg itself)
+	$(info make bootstrap-one  = bootstrap one itself)
 endif
 	$(info make bootstrap       = bootstrap collective or new drones)
 	@true
@@ -66,12 +66,12 @@ clean-init:
 build: clean-init
 	@$(EMACS) $(EMACS_ARGUMENTS) $(SILENCIO) \
 	$(BORG_ARGUMENTS) \
-	--funcall borg-batch-rebuild $(INIT_FILES) 2>&1
+	--funcall one-batch-rebuild $(INIT_FILES) 2>&1
 
 build-init: clean-init
 	@$(EMACS) $(EMACS_ARGUMENTS) \
 	$(BORG_ARGUMENTS) \
-	--funcall borg-batch-rebuild-init $(INIT_FILES) 2>&1
+	--funcall one-batch-rebuild-init $(INIT_FILES) 2>&1
 
 tangle-init: init.el
 init.el: init.org
@@ -82,18 +82,18 @@ init.el: init.org
 quick: clean-init
 	@$(EMACS) $(EMACS_ARGUMENTS) $(SILENCIO) \
 	$(BORG_ARGUMENTS) \
-	--eval '(borg-batch-rebuild t)' 2>&1
+	--eval '(one-batch-rebuild t)' 2>&1
 
-$(BORG_DIR)borg.mk: ;
+$(BORG_DIR)one.mk: ;
 lib/%: .FORCE
 	@$(EMACS) $(EMACS_ARGUMENTS) $(SILENCIO) \
 	$(BORG_ARGUMENTS) \
-	--eval '(borg-build "$*")' 2>&1
+	--eval '(one-build "$*")' 2>&1
 
 bootstrap:
 	@printf "\n=== Running 'git submodule init' ===\n\n"
 	@git submodule init
-	@printf "\n=== Running '$(BORG_DIR)borg.sh' ===\n"
-	@$(BORG_DIR)borg.sh
+	@printf "\n=== Running '$(BORG_DIR)one.sh' ===\n"
+	@$(BORG_DIR)one.sh
 	@printf "\n=== Running 'make build' ===\n\n"
 	@make build

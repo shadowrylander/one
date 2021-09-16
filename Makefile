@@ -1,6 +1,6 @@
 -include config.mk
 
-PKG = borg
+PKG = one
 
 ELS   = $(PKG).el
 ELS  += $(PKG)-elpa.el
