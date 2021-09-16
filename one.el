@@ -475,11 +475,7 @@ then also activate the clone using `one-activate'."
     (if  build
         (dolist (cmd build)
           (message "  Running `%s'..." cmd)
-          (cond ((member cmd '("one-update-autoloads"
-                               "one-byte-compile"
-                               "one-makeinfo"))
-                 (funcall (intern cmd) clone))
-                ((string-match-p "\\`(" cmd)
+          (cond ((string-match-p "\\`(" cmd)
                  (eval (read cmd)))
                 (build-cmd
                  (when (or (stringp build-cmd)
@@ -491,11 +487,7 @@ then also activate the clone using `one-activate'."
                                    (?S . ,(shell-quote-argument cmd)))))))
                 (t
                  (shell-command cmd)))
-          (message "  Running `%s'...done" cmd))
-      (let ((path (mapcar #'file-name-as-directory (one-load-path clone))))
-        (one-update-autoloads clone path)
-        (one-byte-compile clone path)
-        (one-makeinfo clone)))))
+          (message "  Running `%s'...done" cmd)))))
 
 (defun one--build-interactive (clone)
   (save-some-buffers
