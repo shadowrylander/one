@@ -379,23 +379,8 @@ load \"`user-emacs-directory'/etc/one/init.el\", if that exists."
 Add the appropriate directories to `load-path' and
 `Info-directory-list', and load the autoloads file,
 if it exists."
-  (interactive (list (one-read-clone "Activate clone: ")))
-  (dolist (dir (one-load-path clone))
-    (let (file)
-      (cond ((and (file-exists-p
-                   (setq file (expand-file-name
-                               (concat clone "-autoloads.el") dir)))
-                  (with-demoted-errors "Error loading autoloads: %s"
-                    (load file nil t))))
-            ((and (file-exists-p
-                   (setq file (expand-file-name
-                               (concat clone "-loaddefs.el") dir)))
-                  (with-demoted-errors "Error loading autoloads: %s"
-                    (add-to-list 'load-path dir) ; for `org'
-                    (load file nil t))))
-            (t (push dir load-path)))))
-  (dolist (dir (one-info-path clone))
-    (push  dir Info-directory-list)))
+  (interactive)
+  (message "Sorry! Activating the profile \"%s\" does nothing!" clone))
 
 ;;; Construction
 
