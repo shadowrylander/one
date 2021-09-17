@@ -445,9 +445,10 @@ This function is to be used only with `--batch'."
 Interactively, or when optional ACTIVATE is non-nil,
 then also activate the clone using `one-activate'."
   (interactive (list (one-read-clone "Build drone: ") t))
-  (if noninteractive
-      (one--build-noninteractive clone)
-    (one--build-interactive clone))
+  ;; (if noninteractive
+  ;;     (one--build-noninteractive clone)
+  ;;   (one--build-interactive clone))
+  (one--build-noninteractive clone)
   (when activate
     (one-activate clone)))
 
@@ -848,7 +849,7 @@ Formatting is according to the commit message conventions."
             (one--link-gitdir profile)
             (let ((default-directory gitdir))
               (one--call-git profile "config" "core.worktree"
-                              (concat "../../../lib/" profile)))))
+                              (concat "../../../profiles/" profile)))))
       (one--call-git profile "submodule" "absorbgitdirs" "--" (one-worktree profile)))))
 
 (defun one--maybe-reuse-gitdir (profile)
