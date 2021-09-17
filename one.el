@@ -76,7 +76,10 @@
   'one-drones-directory "One 3.2.0")
 
 (defvar pre-user-emacs-directory)
-(defvar one-drones-directory (concat (or pre-user-emacs-directory user-emacs-directory) "profiles")
+(defvar one-drones-directory (concat
+                              (or pre-user-emacs-directory user-emacs-directory)
+                              "profiles"
+                              (if (member system-type '(windows-nt ms-dos)) "\\" "/"))
   "Directory beneath which drone submodules are placed.
 If you need to change this, then do so before loading `one'.")
 
