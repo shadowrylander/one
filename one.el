@@ -283,14 +283,14 @@ to variable `one-rewrite-urls-alist' (which see)."
   (if (require 'epkg nil t)
       (let* ((name (completing-read prompt (epkgs 'name)
                                     nil nil nil 'epkg-package-history))
-             (pkg  (epkg name))
-             (url  (and pkg
-                        (if (or (epkg-git-package-p pkg)
-                                (epkg-github-package-p pkg)
-                                (epkg-orphaned-package-p pkg)
-                                (epkg-gitlab-package-p pkg))
-                            (eieio-oref pkg 'url)
-                          (eieio-oref pkg 'mirror-url)))))
+             (profile  (epkg name))
+             (url  (and profile
+                        (if (or (epkg-git-package-p profile)
+                                (epkg-github-package-p profile)
+                                (epkg-orphaned-package-p profile)
+                                (epkg-gitlab-package-p profile))
+                            (eieio-oref profile 'url)
+                          (eieio-oref profile 'mirror-url)))))
         (when url
           (pcase-dolist (`(,orig . ,base) one-rewrite-urls-alist)
             (when (string-prefix-p orig url)
@@ -732,11 +732,11 @@ build and activate the drone."
                   url
                   (file-relative-name (one-worktree profile)))
     (one--sort-submodule-sections ".gitmodules")
+    (one--call-git profile "config" "--add" "-f" ".gitmodules" (concat "submodule." profile ".profile") "true")
+    (one--call-git profile "config" "--add" "-f" ".gitmodules" (concat "submodule." profile ".s8472") "true")
     (one--call-git profile "add" ".gitmodules")
     (one--maybe-absorb-gitdir profile))
-  (unless partially
-    (one-build profile)
-    (one-activate profile))
+  (unless partially (one-build profile))
   (one--refresh-magit)
   (message "Assimilating %s...done" profile))
 
@@ -849,26 +849,26 @@ Formatting is according to the commit message conventions."
 
 ;;; Internal Utilities
 
-(defun one--maybe-absorb-gitdir (pkg)
+(defun one--maybe-absorb-gitdir (profile)
   (let* ((ver (nth 2 (split-string (car (process-lines "git" "version")) " ")))
          (ver (and (string-match "\\`[0-9]+\\(\\.[0-9]+\\)*" ver)
                    (match-string 0 ver))))
     (if (version< ver "2.12.0")
-        (let ((gitdir (one-gitdir pkg))
-              (topdir (one-worktree pkg)))
+        (let ((gitdir (one-gitdir profile))
+              (topdir (one-worktree profile)))
           (unless (equal (let ((default-directory topdir))
                            (car (process-lines "git" "rev-parse" "--git-dir")))
                          (directory-file-name gitdir))
             (rename-file (expand-file-name ".git" topdir) gitdir)
-            (one--link-gitdir pkg)
+            (one--link-gitdir profile)
             (let ((default-directory gitdir))
-              (one--call-git pkg "config" "core.worktree"
-                              (concat "../../../lib/" pkg)))))
-      (one--call-git pkg "submodule" "absorbgitdirs" "--" (one-worktree pkg)))))
+              (one--call-git profile "config" "core.worktree"
+                              (concat "../../../lib/" profile)))))
+      (one--call-git profile "submodule" "absorbgitdirs" "--" (one-worktree profile)))))
 
-(defun one--maybe-reuse-gitdir (pkg)
-  (let ((gitdir (one-gitdir pkg))
-        (topdir (one-worktree pkg)))
+(defun one--maybe-reuse-gitdir (profile)
+  (let ((gitdir (one-gitdir profile))
+        (topdir (one-worktree profile)))
     (when (and (file-exists-p gitdir)
                (not (file-exists-p topdir)))
       (pcase (read-char-choice
@@ -878,26 +878,26 @@ Formatting is according to the commit message conventions."
                "     [d] to delete the old gitdir and clone again\n"
                "   [C-g] to abort ")
               '(?r ?d))
-        (?r (one--restore-worktree pkg))
+        (?r (one--restore-worktree profile))
         (?d (delete-directory gitdir t t))))))
 
-(defun one--restore-worktree (pkg)
-  (let ((topdir (one-worktree pkg)))
+(defun one--restore-worktree (profile)
+  (let ((topdir (one-worktree profile)))
     (make-directory topdir t)
-    (one--link-gitdir pkg)
+    (one--link-gitdir profile)
     (let ((default-directory topdir))
-      (one--call-git pkg "reset" "--hard" "HEAD"))))
+      (one--call-git profile "reset" "--hard" "HEAD"))))
 
-(defun one--link-gitdir (pkg)
-  (let ((gitdir (one-gitdir pkg))
-        (topdir (one-worktree pkg)))
+(defun one--link-gitdir (profile)
+  (let ((gitdir (one-gitdir profile))
+        (topdir (one-worktree profile)))
     (with-temp-file (expand-file-name ".git" topdir)
       (insert "gitdir: " (file-relative-name gitdir topdir) "\n"))))
 
-(defun one--call-git (pkg &rest args)
+(defun one--call-git (profile &rest args)
   (let ((process-connection-type nil)
         (buffer (generate-new-buffer
-                 (concat " *One Git" (and pkg (concat " " pkg)) "*"))))
+                 (concat " *One Git" (and profile (concat " " profile)) "*"))))
     (if (eq (apply #'call-process "git" nil buffer nil args) 0)
         (kill-buffer buffer)
       (with-current-buffer buffer
@@ -941,22 +941,22 @@ Non-interactively operate in FILE instead."
 
 (defun one--maybe-confirm-unsafe-action (action profile url)
   (require 'epkg nil t)
-  (let* ((pkg (and (fboundp 'epkg)
+  (let* ((profile (and (fboundp 'epkg)
                    (epkg profile)))
-         (ask (cond ((and pkg
+         (ask (cond ((and profile
                           (fboundp 'epkg-wiki-profile-p)
-                          (epkg-wiki-profile-p pkg)) "\
+                          (epkg-wiki-profile-p profile)) "\
 This profile is from the Emacswiki.  Anyone could trivially \
 inject malicious code.  Do you really want to %s it? ")
-                    ((or (and pkg
+                    ((or (and profile
                               (fboundp 'epkg-orphaned-profile-p)
-                              (epkg-orphaned-profile-p pkg))
+                              (epkg-orphaned-profile-p profile))
                          (string-match-p "emacsorphanage" url)) "\
 This profile is from the Emacsorphanage, which might import it \
 over an insecure connection.  Do you really want to %s it? ")
-                    ((or (and pkg
+                    ((or (and profile
                               (fboundp 'epkg-shelved-profile-p)
-                              (epkg-shelved-profile-p pkg))
+                              (epkg-shelved-profile-p profile))
                          (string-match-p "emacsattic" url)) "\
 This profile is from the Emacsattic, which might have imported it \
 over an insecure connection.  Do you really want to %s it? ")
