@@ -455,7 +455,7 @@ then also activate the clone using `one-activate'."
   (when activate
     (one-activate clone)))
 
-(defun one--build-noninteractive (clone)
+(defun one--build-noninteractive (clone &optional borg)
   (let ((default-directory (one-worktree clone))
         (build-cmd (if (functionp one-build-shell-command)
                        (funcall one-build-shell-command clone)
@@ -892,7 +892,7 @@ Formatting is according to the commit message conventions."
       (with-current-buffer buffer
         (special-mode))
       (pop-to-buffer buffer)
-      (error "Git failed"))))
+      (error "One Git: %s %s:\n\n%s" pkg args (buffer-string)))))
 
 (defun one--git-success (&rest args)
   (= (apply #'process-file "git" nil nil nil args) 0))
