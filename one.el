@@ -208,7 +208,7 @@ directories containing a file named \"dir\"."
   '(build-step load-path no-byte-compile info-path)
   "List of submodule variables which can have multiple values.")
 
-(defun one-drones (&optional include-variables)
+(defun one-drones* (&optional include-variables)
   "Return a list of all assimilated drones.
 
 The returned value is a list of the names of the assimilated
@@ -256,6 +256,22 @@ included in the returned value."
                    (and (string-equal (substring line 50 offset) prefix)
                         (list (substring line offset))))
                  (process-lines "git" "submodule--helper" "list")))))
+
+(defun one-drones (&optional include-variables assimilating)
+  (seq-filter #'(lambda (profile*) (interactive)
+    (let* ((profile (car profile*))
+            (path* (cl-getf (cdr profile*) 'path))
+            (path (cond ((listp path*) (car path*))
+                        ((stringp path*) path*)))
+            (exists (file-exists-p (one-worktree profile))))
+        (and (not (string-match-p (regexp-quote "\\") profile))
+            (not (string-match-p (regexp-quote "/") profile))
+            (or
+              (and assimilating (not exists))
+              (and exists (not assimilating)))
+            (string=
+                  (string-remove-suffix profile path)
+                  (string-remove-prefix one-user-emacs-directory one-drones-directory))))) (one-drones* t)))
 
 (defun one-clones ()
   "Return a list of cloned packages.
@@ -695,6 +711,40 @@ then also activate the clone using `one-activate'."
 
 ;;; Assimilation
 
+;; (defun one-assimilate (profile url &optional partially)
+;;   "Assimilate the profile named PROFILE from URL.
+
+;; If `epkg' is available, then only read the name of the profile
+;; in the minibuffer and use the url stored in the Epkg database.
+;; If `epkg' is unavailable, the profile is not in the database, or
+;; with a prefix argument, then also read the url in the minibuffer.
+
+;; With a negative prefix argument only add the submodule but don't
+;; build and activate the drone."
+;;   (interactive
+;;    (nconc (one-read-profile "Assimilate profile: " current-prefix-arg)
+;;           (list (< (prefix-numeric-value current-prefix-arg) 0))))
+;;   (one--maybe-confirm-unsafe-action "assimilate" profile url)
+;;   (message "Assimilating %s..." profile)
+;;   (let ((default-directory one-top-level-directory))
+;;     (one--maybe-reuse-gitdir profile)
+;;     (one--call-git profile
+;;                   "submodule"
+;;                   "add"
+;;                   "--name"
+;;                   (concat "profile" (if (member system-type '(windows-nt ms-dos)) "\\" "/"))
+;;                   profile
+;;                   url
+;;                   (file-relative-name (one-worktree profile)))
+;;     (one--sort-submodule-sections ".gitmodules")
+;;     (one--call-git profile "config" "--add" "-f" ".gitmodules" (concat "submodule." profile ".profile") "true")
+;;     (one--call-git profile "config" "--add" "-f" ".gitmodules" (concat "submodule." profile ".s8472") "true")
+;;     (one--call-git profile "add" ".gitmodules")
+;;     (one--maybe-absorb-gitdir profile))
+;;   (unless partially (one-build profile))
+;;   (one--refresh-magit)
+;;   (message "Assimilating %s...done" profile))
+
 (defun one-assimilate (profile url &optional partially)
   "Assimilate the profile named PROFILE from URL.
 
@@ -710,21 +760,21 @@ build and activate the drone."
           (list (< (prefix-numeric-value current-prefix-arg) 0))))
   (one--maybe-confirm-unsafe-action "assimilate" profile url)
   (message "Assimilating %s..." profile)
-  (let ((default-directory one-top-level-directory))
-    (one--maybe-reuse-gitdir profile)
-    (one--call-git profile
-                  "submodule"
-                  "add"
-                  "--name"
-                  (concat "profile" (if (member system-type '(windows-nt ms-dos)) "\\" "/"))
-                  profile
-                  url
-                  (file-relative-name (one-worktree profile)))
-    (one--sort-submodule-sections ".gitmodules")
-    (one--call-git profile "config" "--add" "-f" ".gitmodules" (concat "submodule." profile ".profile") "true")
-    (one--call-git profile "config" "--add" "-f" ".gitmodules" (concat "submodule." profile ".s8472") "true")
-    (one--call-git profile "add" ".gitmodules")
-    (one--maybe-absorb-gitdir profile))
+  (unless (equal (one-get profile "s8472") "true")
+      (one--maybe-reuse-gitdir profile)
+      (one--call-git
+        profile
+        "-C" one-top-level-directory
+        "submodule"
+        "add"
+        "-f"
+        "--depth" "1"
+        "--name" profile
+        url
+        (or (one-get profile "path") (file-relative-name (one-worktree profile))))
+      (one--sort-submodule-sections ".gitmodules")
+      (one--call-git profile "add" ".gitmodules")
+      (one--maybe-absorb-gitdir profile))
   (unless partially (one-build profile))
   (one--refresh-magit)
   (message "Assimilating %s...done" profile))
@@ -892,7 +942,7 @@ Formatting is according to the commit message conventions."
       (with-current-buffer buffer
         (special-mode))
       (pop-to-buffer buffer)
-      (error "One Git: %s %s:\n\n%s" pkg args (buffer-string)))))
+      (error "One Git: %s %s:\n\n%s" profile args (buffer-string)))))
 
 (defun one--git-success (&rest args)
   (= (apply #'process-file "git" nil nil nil args) 0))
