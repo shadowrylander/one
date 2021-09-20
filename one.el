@@ -69,6 +69,7 @@
 (declare-function magit-get             "magit-git" (&rest keys))
 (declare-function magit-get-some-remote "magit-git" (&optional branch))
 
+(defvar one-assimilating-lisp)
 (defvar git-commit-mode-map)
 (defvar compilation-mode-font-lock-keywords)
 
@@ -263,15 +264,18 @@ included in the returned value."
             (path* (cl-getf (cdr profile*) 'path))
             (path (cond ((listp path*) (car path*))
                         ((stringp path*) path*)))
-            (exists (file-exists-p (one-worktree profile))))
+            (exists (file-exists-p (one-worktree profile)))
+            (slash (if (member system-type '(windows-nt ms-dos)) "\\" "/")))
         (and (not (string-match-p (regexp-quote "\\") profile))
             (not (string-match-p (regexp-quote "/") profile))
             (or
               (and assimilating (not exists))
               (and exists (not assimilating)))
-            (string=
-                  (string-remove-suffix profile path)
-                  (string-remove-prefix one-user-emacs-directory one-drones-directory))))) (one-drones* t)))
+            (member
+              (string-remove-prefix one-user-emacs-directory one-drones-directory)
+              (list
+                (string-remove-suffix profile path)
+                (string-remove-suffix (concat profile slash "lisp") path)))))) (one-drones* t)))
 
 (defun one-clones ()
   "Return a list of cloned packages.
@@ -771,13 +775,28 @@ build and activate the drone."
         "--depth" "1"
         "--name" profile
         url
-        (or (one-get profile "path") (file-relative-name (one-worktree profile))))
+        (or
+          (one-get profile "path")
+          (concat
+            (string-remove-prefix one-user-emacs-directory one-drones-directory)
+            (if (member system-type '(windows-nt ms-dos)) "\\" "/")
+            profile
+            (if (member system-type '(windows-nt ms-dos)) "\\" "/")
+            (if one-assimilating-lisp "lisp" ""))))
       (one--sort-submodule-sections ".gitmodules")
       (one--call-git profile "add" ".gitmodules")
       (one--maybe-absorb-gitdir profile))
   (unless partially (one-build profile))
   (one--refresh-magit)
   (message "Assimilating %s...done" profile))
+
+(defun one-assimilate-lisp (&rest args)
+  (interactive
+   (nconc (one-read-profile "Assimilate profile: " current-prefix-arg)
+          (list (< (prefix-numeric-value current-prefix-arg) 0))))
+  (setq one-assimilating-lisp t)
+  (apply #'one-assimilate args)
+  (setq one-assimilating-lisp nil))
 
 (defun one-clone (profile url)
   "Clone the profile named PROFILE from URL, without assimilating it.
