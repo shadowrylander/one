@@ -913,20 +913,22 @@ Formatting is according to the commit message conventions."
                               (concat "../../../profiles/" profile)))))
       (one--call-git profile "submodule" "absorbgitdirs" "--" (one-worktree profile)))))
 
-(defun one--maybe-reuse-gitdir (profile)
-  (let ((gitdir (one-gitdir profile))
-        (topdir (one-worktree profile)))
-    (when (and (file-exists-p gitdir)
-               (not (file-exists-p topdir)))
-      (pcase (read-char-choice
-              (concat
-               gitdir " already exists.\n"
-               "Type [r] to reuse the existing gitdir and create the worktree\n"
-               "     [d] to delete the old gitdir and clone again\n"
-               "   [C-g] to abort ")
-              '(?r ?d))
-        (?r (one--restore-worktree profile))
-        (?d (delete-directory gitdir t t))))))
+;; (defun one--maybe-reuse-gitdir (profile)
+;;   (let ((gitdir (one-gitdir profile))
+;;         (topdir (one-worktree profile)))
+;;     (when (and (file-exists-p gitdir)
+;;                (not (file-exists-p topdir)))
+;;       (pcase (read-char-choice
+;;               (concat
+;;                gitdir " already exists.\n"
+;;                "Type [r] to reuse the existing gitdir and create the worktree\n"
+;;                "     [d] to delete the old gitdir and clone again\n"
+;;                "   [C-g] to abort ")
+;;               '(?r ?d))
+;;         (?r (one--restore-worktree profile))
+;;         (?d (delete-directory gitdir t t))))))
+
+(defalias #'one--maybe-reuse-gitdir #'ignore)
 
 (defun one--restore-worktree (profile)
   (let ((topdir (one-worktree profile)))
@@ -986,33 +988,35 @@ Non-interactively operate in FILE instead."
           (goto-char end))))
     (save-buffer)))
 
-(defun one--maybe-confirm-unsafe-action (action profile url)
-  (require 'epkg nil t)
-  (let* ((profile (and (fboundp 'epkg)
-                   (epkg profile)))
-         (ask (cond ((and profile
-                          (fboundp 'epkg-wiki-profile-p)
-                          (epkg-wiki-profile-p profile)) "\
-This profile is from the Emacswiki.  Anyone could trivially \
-inject malicious code.  Do you really want to %s it? ")
-                    ((or (and profile
-                              (fboundp 'epkg-orphaned-profile-p)
-                              (epkg-orphaned-profile-p profile))
-                         (string-match-p "emacsorphanage" url)) "\
-This profile is from the Emacsorphanage, which might import it \
-over an insecure connection.  Do you really want to %s it? ")
-                    ((or (and profile
-                              (fboundp 'epkg-shelved-profile-p)
-                              (epkg-shelved-profile-p profile))
-                         (string-match-p "emacsattic" url)) "\
-This profile is from the Emacsattic, which might have imported it \
-over an insecure connection.  Do you really want to %s it? ")
-                    ((or (string-prefix-p "git://" url)
-                         (string-prefix-p "http://" url)) "\
-This profile is being fetched over an insecure connection. \
-Do you really want to %s it? "))))
-    (when (and ask (not (yes-or-no-p (format ask action))))
-      (user-error "Abort"))))
+;; (defun one--maybe-confirm-unsafe-action (action profile url)
+;;   (require 'epkg nil t)
+;;   (let* ((profile (and (fboundp 'epkg)
+;;                    (epkg profile)))
+;;          (ask (cond ((and profile
+;;                           (fboundp 'epkg-wiki-profile-p)
+;;                           (epkg-wiki-profile-p profile)) "\
+;; This profile is from the Emacswiki.  Anyone could trivially \
+;; inject malicious code.  Do you really want to %s it? ")
+;;                     ((or (and profile
+;;                               (fboundp 'epkg-orphaned-profile-p)
+;;                               (epkg-orphaned-profile-p profile))
+;;                          (string-match-p "emacsorphanage" url)) "\
+;; This profile is from the Emacsorphanage, which might import it \
+;; over an insecure connection.  Do you really want to %s it? ")
+;;                     ((or (and profile
+;;                               (fboundp 'epkg-shelved-profile-p)
+;;                               (epkg-shelved-profile-p profile))
+;;                          (string-match-p "emacsattic" url)) "\
+;; This profile is from the Emacsattic, which might have imported it \
+;; over an insecure connection.  Do you really want to %s it? ")
+;;                     ((or (string-prefix-p "git://" url)
+;;                          (string-prefix-p "http://" url)) "\
+;; This profile is being fetched over an insecure connection. \
+;; Do you really want to %s it? "))))
+;;     (when (and ask (not (yes-or-no-p (format ask action))))
+;;       (user-error "Abort"))))
+
+(defalias #'one--maybe-confirm-unsafe-action #'ignore)
 
 ;;; _
 (provide 'one)
