@@ -69,7 +69,6 @@
 (declare-function magit-get             "magit-git" (&rest keys))
 (declare-function magit-get-some-remote "magit-git" (&optional branch))
 
-(defvar one-assimilating-lisp)
 (defvar git-commit-mode-map)
 (defvar compilation-mode-font-lock-keywords)
 
@@ -780,23 +779,13 @@ build and activate the drone."
           (concat
             (string-remove-prefix one-user-emacs-directory one-drones-directory)
             (if (member system-type '(windows-nt ms-dos)) "\\" "/")
-            profile
-            (if (member system-type '(windows-nt ms-dos)) "\\" "/")
-            (if one-assimilating-lisp "lisp" ""))))
+            profile)))
       (one--sort-submodule-sections ".gitmodules")
       (one--call-git profile "add" ".gitmodules")
       (one--maybe-absorb-gitdir profile))
   (unless partially (one-build profile))
   (one--refresh-magit)
   (message "Assimilating %s...done" profile))
-
-(defun one-assimilate-lisp (&rest args)
-  (interactive
-   (nconc (one-read-profile "Assimilate profile: " current-prefix-arg)
-          (list (< (prefix-numeric-value current-prefix-arg) 0))))
-  (setq one-assimilating-lisp t)
-  (apply #'one-assimilate args)
-  (setq one-assimilating-lisp nil))
 
 (defun one-clone (profile url)
   "Clone the profile named PROFILE from URL, without assimilating it.
@@ -961,7 +950,7 @@ Formatting is according to the commit message conventions."
       (with-current-buffer buffer
         (special-mode))
       (pop-to-buffer buffer)
-      (error "One Git: %s %s:\n\n%s" profile args (buffer-string)))))
+      (error "One Git: %s | %s:\n\n%s" profile args (buffer-string)))))
 
 (defun one--git-success (&rest args)
   (= (apply #'process-file "git" nil nil nil args) 0))
