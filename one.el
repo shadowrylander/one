@@ -75,7 +75,7 @@
 (define-obsolete-variable-alias 'one-drone-directory
   'one-drones-directory "One 3.2.0")
 
-(defvar pre-user-emacs-directory)
+(defvar pre-user-emacs-directory nil)
 (defvar one-drones-directory (concat
                               (or pre-user-emacs-directory user-emacs-directory)
                               "profiles"
@@ -474,7 +474,7 @@ then also activate the clone using `one-activate'."
   (when activate
     (one-activate clone)))
 
-(defun one--build-noninteractive (clone &optional borg)
+(defun one--build-noninteractive (clone &optional one)
   (let ((default-directory (one-worktree clone))
         (build-cmd (if (functionp one-build-shell-command)
                        (funcall one-build-shell-command clone)
