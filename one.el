@@ -60,11 +60,11 @@
 (declare-function eieio-oref        "eieio-core" (obj slot))
 (declare-function epkg                    "epkg" (name))
 (declare-function epkgs                   "epkg" (&optional select predicates))
-(declare-function epkg-git-package-p      "epkg" (obj))
-(declare-function epkg-github-package-p   "epkg" (obj))
-(declare-function epkg-gitlab-package-p   "epkg" (obj))
-(declare-function epkg-orphaned-package-p "epkg" (obj))
-(declare-function epkg-read-package       "epkg" (prompt &optional default))
+(declare-function ePkg-git-package-p      "epkg" (obj))
+(declare-function ePkg-github-package-p   "epkg" (obj))
+(declare-function ePkg-gitlab-package-p   "epkg" (obj))
+(declare-function ePkg-orphaned-package-p "epkg" (obj))
+(declare-function ePkg-read-package       "epkg" (prompt &optional default))
 (declare-function format-spec      "format-spec" (format specification))
 (declare-function magit-get             "magit-git" (&rest keys))
 (declare-function magit-get-some-remote "magit-git" (&optional branch))
@@ -304,13 +304,13 @@ explicitly provided by the user, it may be modified according
 to variable `one-rewrite-urls-alist' (which see)."
   (if (require 'epkg nil t)
       (let* ((name (completing-read prompt (epkgs 'name)
-                                    nil nil nil 'epkg-package-history))
+                                    nil nil nil 'ePkg-package-history))
              (profile  (epkg name))
              (url  (and profile
-                        (if (or (epkg-git-package-p profile)
-                                (epkg-github-package-p profile)
-                                (epkg-orphaned-package-p profile)
-                                (epkg-gitlab-package-p profile))
+                        (if (or (ePkg-git-package-p profile)
+                                (ePkg-github-package-p profile)
+                                (ePkg-orphaned-package-p profile)
+                                (ePkg-gitlab-package-p profile))
                             (eieio-oref profile 'url)
                           (eieio-oref profile 'mirror-url)))))
         (when url
@@ -332,7 +332,7 @@ to variable `one-rewrite-urls-alist' (which see)."
 (defun one-read-clone (prompt)
   "Read the name of a cloned profile, prompting with PROMPT."
   (require 'epkg nil t)
-  (completing-read prompt (one-clones) nil t nil 'epkg-package-history))
+  (completing-read prompt (one-clones) nil t nil 'ePkg-package-history))
 
 (defmacro one-silencio (regexp &rest body)
   "Execute the forms in BODY while silencing messages that don't match REGEXP."
@@ -993,19 +993,19 @@ Non-interactively operate in FILE instead."
 ;;   (let* ((profile (and (fboundp 'epkg)
 ;;                    (epkg profile)))
 ;;          (ask (cond ((and profile
-;;                           (fboundp 'epkg-wiki-profile-p)
-;;                           (epkg-wiki-profile-p profile)) "\
+;;                           (fboundp 'ePkg-wiki-profile-p)
+;;                           (ePkg-wiki-profile-p profile)) "\
 ;; This profile is from the Emacswiki.  Anyone could trivially \
 ;; inject malicious code.  Do you really want to %s it? ")
 ;;                     ((or (and profile
-;;                               (fboundp 'epkg-orphaned-profile-p)
-;;                               (epkg-orphaned-profile-p profile))
+;;                               (fboundp 'ePkg-orphaned-profile-p)
+;;                               (ePkg-orphaned-profile-p profile))
 ;;                          (string-match-p "emacsorphanage" url)) "\
 ;; This profile is from the Emacsorphanage, which might import it \
 ;; over an insecure connection.  Do you really want to %s it? ")
 ;;                     ((or (and profile
-;;                               (fboundp 'epkg-shelved-profile-p)
-;;                               (epkg-shelved-profile-p profile))
+;;                               (fboundp 'ePkg-shelved-profile-p)
+;;                               (ePkg-shelved-profile-p profile))
 ;;                          (string-match-p "emacsattic" url)) "\
 ;; This profile is from the Emacsattic, which might have imported it \
 ;; over an insecure connection.  Do you really want to %s it? ")

@@ -512,7 +512,7 @@ lib/DRONE~.  Alternatively you can just rebuild everything using ~make
 build~.
 
 If you wish to avoid such complications, you should use the command
-~epkg-describe-package~ before assimilating a package.  Among other
+~ePkg-describe-package~ before assimilating a package.  Among other
 useful information, it also provides a dependency tree.
 
 Once the packages have been added as submodules and the drones have
@@ -691,7 +691,7 @@ Or for multiple packages:
 The command ~one-insert-update-message~ can be used to generate such
 commit messages.
 
-To update the Epkg package database use the command ~epkg-update~.
+To update the Epkg package database use the command ~ePkg-update~.
 
 * Patching drones
 
