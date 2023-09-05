@@ -32,7 +32,7 @@
   description = "Assimilate Emacs packages as Git submodules";
   inputs = rec {
     bundle = {
-      url = "git+https://github.com/sylvorg/bundle.git";
+      url = "https://github.com/sylvorg/bundle.git";
       type = "git";
       submodules = true;
     };
